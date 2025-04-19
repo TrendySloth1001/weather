@@ -245,21 +245,104 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
   }
 
   Widget _buildNavBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.8),
-        border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.1)),
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        bottom: MediaQuery.of(context).padding.bottom + 16,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withOpacity(0.2),
+                  Colors.white.withOpacity(0.1),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildNavBarItem(0, 'Home', Icons.home_rounded, Icons.home_outlined),
+                _buildNavBarItem(1, 'Map', Icons.map_rounded, Icons.map_outlined),
+                _buildNavBarItem(2, 'Analytics', Icons.insights_rounded, Icons.insights_outlined),
+              ],
+            ),
+          ),
         ),
       ),
-      child: TabBar(
-        controller: _tabController,
-        tabs: const [
-          Tab(icon: Icon(Icons.home), text: 'Home'),
-          Tab(icon: Icon(Icons.map), text: 'Map'),
-          Tab(icon: Icon(Icons.analytics), text: 'Analytics'),
-        ],
+    ).animate().slideY(
+      begin: 1,
+      end: 0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOutExpo,
+    );
+  }
+
+  Widget _buildNavBarItem(int index, String label, IconData activeIcon, IconData inactiveIcon) {
+    final isSelected = _tabController.index == index;
+    
+    return GestureDetector(
+      onTap: () => setState(() => _tabController.animateTo(index)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: isSelected ? BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.blue.withOpacity(0.3),
+              Colors.blue.withOpacity(0.1),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.blue.withOpacity(0.3),
+          ),
+        ) : null,
+        child: SizedBox(
+          height: 40,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isSelected ? activeIcon : inactiveIcon,
+                color: isSelected ? Colors.blue : Colors.grey,
+                size: 20,
+              ),
+              if (isSelected) ... [
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.blue,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
+    ).animate(
+      target: isSelected ? 1 : 0,
+    ).scale(
+      begin: const Offset(0.95, 0.95),
+      end: const Offset(1.0, 1.0),
+      curve: Curves.easeOutExpo,
+      duration: const Duration(milliseconds: 200),
     );
   }
 
