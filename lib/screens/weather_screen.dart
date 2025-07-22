@@ -21,6 +21,10 @@ import '../widgets/weather_effects/weather_particles.dart';
 import '../widgets/hourly_weather_timeline.dart';
 import '../widgets/loading_shimmer.dart';
 import 'dart:ui';
+import 'settings_screen.dart';
+import 'onboarding_screen.dart';
+
+bool _showOnboarding = true;
 
 class WeatherScreen extends StatefulWidget {
   const WeatherScreen({super.key});
@@ -29,7 +33,8 @@ class WeatherScreen extends StatefulWidget {
   State<WeatherScreen> createState() => _WeatherScreenState();
 }
 
-class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProviderStateMixin {
+class _WeatherScreenState extends State<WeatherScreen>
+    with SingleTickerProviderStateMixin {
   final _weatherService = WeatherService();
   final _locationService = LocationService();
   WeatherModel? _weather;
@@ -42,9 +47,9 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
   bool _isCurrentLocationSaved = false;
   late TabController _tabController;
 
-  bool get _isNight => _weather != null 
-    ? _weather!.time.hour < 6 || _weather!.time.hour > 18
-    : false;
+  bool get _isNight => _weather != null
+      ? _weather!.time.hour < 6 || _weather!.time.hour > 18
+      : false;
 
   @override
   void initState() {
@@ -54,6 +59,15 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
     _searchController.addListener(_onSearchChanged);
     _loadSavedLocations();
     _loadNearbyLocations();
+    Future.delayed(Duration.zero, () async {
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted && _showOnboarding) {
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+        );
+        setState(() => _showOnboarding = false);
+      }
+    });
   }
 
   @override
@@ -66,7 +80,8 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
 
   Future<void> _onSearchChanged() async {
     if (_searchController.text.length >= 2) {
-      final suggestions = await _weatherService.getLocationSuggestions(_searchController.text);
+      final suggestions =
+          await _weatherService.getLocationSuggestions(_searchController.text);
       setState(() {
         _suggestions = suggestions;
       });
@@ -152,7 +167,8 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
         longitude: _weather!.longitude,
         displayName: _cityName,
       );
-      _isCurrentLocationSaved = await _locationService.isLocationSaved(location);
+      _isCurrentLocationSaved =
+          await _locationService.isLocationSaved(location);
       setState(() {});
     }
   }
@@ -189,20 +205,22 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
       body: Stack(
         children: [
           _buildWeatherBackground(),
-          SafeArea(
-            child: TabBarView(
-              controller: _tabController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _buildMainContent(),
-                _buildMapTab(),
-                _buildAnalyticsTab(),
-              ],
+          if (_showOnboarding) Container(),
+          if (!_showOnboarding)
+            SafeArea(
+              child: TabBarView(
+                controller: _tabController,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _buildMainContent(),
+                  _buildMapTab(),
+                  _buildAnalyticsTab(),
+                ],
+              ),
             ),
-          ),
         ],
       ),
-      bottomNavigationBar: _buildNavBar(),
+      bottomNavigationBar: _showOnboarding ? null : _buildNavBar(),
     );
   }
 
@@ -214,7 +232,7 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
       children: [
         // Base background based on time
         _buildBaseBackground(),
-        
+
         // Weather effects overlay
         if (_weather != null)
           WeatherParticles(
@@ -222,9 +240,11 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
             isNight: _isNight,
           ),
       ],
-    ).animate(
-      target: _weather != null ? 1 : 0,
-    ).fadeIn(duration: const Duration(milliseconds: 500));
+    )
+        .animate(
+          target: _weather != null ? 1 : 0,
+        )
+        .fadeIn(duration: const Duration(milliseconds: 500));
   }
 
   Widget _buildBaseBackground() {
@@ -274,43 +294,49 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildNavBarItem(0, 'Home', Icons.home_rounded, Icons.home_outlined),
-                _buildNavBarItem(1, 'Map', Icons.map_rounded, Icons.map_outlined),
-                _buildNavBarItem(2, 'Analytics', Icons.insights_rounded, Icons.insights_outlined),
+                _buildNavBarItem(
+                    0, 'Home', Icons.home_rounded, Icons.home_outlined),
+                _buildNavBarItem(
+                    1, 'Map', Icons.map_rounded, Icons.map_outlined),
+                _buildNavBarItem(2, 'Analytics', Icons.insights_rounded,
+                    Icons.insights_outlined),
               ],
             ),
           ),
         ),
       ),
     ).animate().slideY(
-      begin: 1,
-      end: 0,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOutExpo,
-    );
+          begin: 1,
+          end: 0,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeOutExpo,
+        );
   }
 
-  Widget _buildNavBarItem(int index, String label, IconData activeIcon, IconData inactiveIcon) {
+  Widget _buildNavBarItem(
+      int index, String label, IconData activeIcon, IconData inactiveIcon) {
     final isSelected = _tabController.index == index;
-    
+
     return GestureDetector(
       onTap: () => setState(() => _tabController.animateTo(index)),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: isSelected ? BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.blue.withOpacity(0.3),
-              Colors.blue.withOpacity(0.1),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.blue.withOpacity(0.3),
-          ),
-        ) : null,
+        decoration: isSelected
+            ? BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.blue.withOpacity(0.3),
+                    Colors.blue.withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.blue.withOpacity(0.3),
+                ),
+              )
+            : null,
         child: SizedBox(
           height: 40,
           child: Row(
@@ -321,7 +347,7 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
                 color: isSelected ? Colors.blue : Colors.grey,
                 size: 20,
               ),
-              if (isSelected) ... [
+              if (isSelected) ...[
                 const SizedBox(width: 8),
                 Text(
                   label,
@@ -336,59 +362,63 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
           ),
         ),
       ),
-    ).animate(
-      target: isSelected ? 1 : 0,
-    ).scale(
-      begin: const Offset(0.95, 0.95),
-      end: const Offset(1.0, 1.0),
-      curve: Curves.easeOutExpo,
-      duration: const Duration(milliseconds: 200),
-    );
+    )
+        .animate(
+          target: isSelected ? 1 : 0,
+        )
+        .scale(
+          begin: const Offset(0.95, 0.95),
+          end: const Offset(1.0, 1.0),
+          curve: Curves.easeOutExpo,
+          duration: const Duration(milliseconds: 200),
+        );
   }
 
   Widget _buildMainContent() {
     if (_weather == null) {
       return const WeatherShimmer();
     }
-    
+
     return SingleChildScrollView(
       child: Column(
         children: [
           _buildHeader(),
           _buildMainWeather().animate().fadeIn(
-            duration: const Duration(milliseconds: 300),
-          ),
+                duration: const Duration(milliseconds: 300),
+              ),
           HourlyWeatherTimeline(
             hourlyWeather: _weather!.hourlyForecast,
             currentTime: _weather!.time,
           ).animate().fadeIn(
-            duration: const Duration(milliseconds: 300),
-          ),
+                duration: const Duration(milliseconds: 300),
+              ),
           const SizedBox(height: 24),
           _buildWeatherDetails().animate().fadeIn(
-            duration: const Duration(milliseconds: 300),
-          ),
+                duration: const Duration(milliseconds: 300),
+              ),
           const SizedBox(height: 24),
           SunMoonInfo(weather: _weather!).animate().fadeIn(
-            duration: const Duration(milliseconds: 300),
-          ),
+                duration: const Duration(milliseconds: 300),
+              ),
           const SizedBox(height: 24),
           WeatherDataCharts(weather: _weather!).animate().fadeIn(
-            duration: const Duration(milliseconds: 300),
-          ),
+                duration: const Duration(milliseconds: 300),
+              ),
           const SizedBox(height: 24),
           WeatherTimeline(
             dailyWeather: _weather!.dailyForecast,
             title: 'Next 7 Days',
           ).animate().fadeIn(
-            duration: const Duration(milliseconds: 300),
-          ),
+                duration: const Duration(milliseconds: 300),
+              ),
           const SizedBox(height: 16),
-        ].animate(
-          interval: Duration(milliseconds: 50),
-        ).slideY(
-          duration: const Duration(milliseconds: 300),
-        ),
+        ]
+            .animate(
+              interval: Duration(milliseconds: 50),
+            )
+            .slideY(
+              duration: const Duration(milliseconds: 300),
+            ),
       ),
     );
   }
@@ -410,15 +440,16 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
     }
     return WeatherAnalytics(
       currentWeather: _weather!,
-      historicalData: _weather!.historicalWeather.isNotEmpty 
-        ? _weather!.historicalWeather
-        : _weather!.dailyForecast, // Fallback to forecast data if no historical data
+      historicalData: _weather!.historicalWeather.isNotEmpty
+          ? _weather!.historicalWeather
+          : _weather!
+              .dailyForecast, // Fallback to forecast data if no historical data
     );
   }
 
   Widget _buildHeader() {
     final topPadding = MediaQuery.of(context).padding.top;
-    
+
     return Container(
       padding: EdgeInsets.only(top: topPadding),
       decoration: BoxDecoration(
@@ -451,7 +482,9 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
               ),
               IconButton(
                 icon: Icon(
-                  _isCurrentLocationSaved ? Icons.favorite : Icons.favorite_border,
+                  _isCurrentLocationSaved
+                      ? Icons.favorite
+                      : Icons.favorite_border,
                   color: _isCurrentLocationSaved ? Colors.red : Colors.white,
                 ),
                 onPressed: _toggleFavorite,
@@ -459,6 +492,17 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
               IconButton(
                 icon: const Icon(Icons.location_on, color: Colors.white),
                 onPressed: _showLocationsDialog,
+              ),
+              IconButton(
+                icon: const Icon(Icons.settings, color: Colors.white),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
+                },
+                tooltip: 'Settings',
               ),
             ],
           ),
@@ -496,18 +540,17 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
-          ).animate()
-            .fadeIn(delay: const Duration(milliseconds: 300))
-            .scale(),
+          ).animate().fadeIn(delay: const Duration(milliseconds: 300)).scale(),
           Text(
             _weather!.weatherCondition,
             style: TextStyle(
               fontSize: 20,
               color: Colors.grey[400],
             ),
-          ).animate()
-            .fadeIn(delay: const Duration(milliseconds: 400))
-            .slideY(begin: 50, duration: const Duration(milliseconds: 500)),
+          )
+              .animate()
+              .fadeIn(delay: const Duration(milliseconds: 400))
+              .slideY(begin: 50, duration: const Duration(milliseconds: 500)),
         ],
       ),
     );
@@ -606,9 +649,8 @@ class _WeatherScreenState extends State<WeatherScreen> with SingleTickerProvider
       (_weather!.latitude - 0.1, _weather!.longitude + 0.1),
     ];
 
-    final locations = await Future.wait(
-      nearbyCoords.map((coord) => _weatherService.getWeather(coord.$1, coord.$2))
-    );
+    final locations = await Future.wait(nearbyCoords
+        .map((coord) => _weatherService.getWeather(coord.$1, coord.$2)));
 
     setState(() {
       _nearbyLocations = locations;
